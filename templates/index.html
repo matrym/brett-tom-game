@@ -1,10 +1,11 @@
-<html lang="en" ng-controller="GameCtrl">
+<html lang="en" ng-app="gameApp">
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- Angular Material style sheet -->
   <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/angular_material/1.1.0-rc2/angular-material.min.css">
+  <link rel="stylesheet" href="/css/game.css">
 </head>
-<body ng-app="gameApp" ng-cloak>
+<body ng-cloak ng-controller="AppCtrl">
   <!--
     Your HTML content here
   -->
@@ -48,55 +49,93 @@
 
         // Handle routing for the app
         $stateProvider
+            .state('gameParamsSetup', {
+                url: '/',
+                templateUrl: '/templates/gameParamsSetup.html',
+                controller: 'GameParamsSetupCtrl'
+            })
             .state('game', {
-                url: '/game/:gameId',
+                url: '/game/:gameId/:playerName/',
                 templateUrl: '/templates/game.html',
                 controller: 'GameCtrl'
             });
-        $urlRouterProvider.otherwise('/game/' + todaysGameId);
+        $urlRouterProvider.otherwise('/');
 
       }
     ]);
+
+    app.controller("AppCtrl", function($scope){
+      console.log('Main app ctrl');
+    });
+
+
+    app.controller("GameParamsSetupCtrl", function($scope, $state){
+      console.log('Just ask for basic setup info that changes the url');
+
+      // Handle link clicks
+      $scope.goToGame = function(id){
+        console.log('test' + $scope.gameId + " " + $scope.username);
+        $state.go('game', {"gameId": $scope.gameId, "playerName": $scope.username});
+      };
+
+    });
 
     // Main controller for the game
     app.controller("GameCtrl", function($scope, $firebaseObject, $firebaseArray, $state, $stateParams) {
 
       // Game id as stored in firebase
       var gameId = $state.params.gameId;
+      var username = $state.params.username;
 
-      // download the data into a local object
+      // download the boardgame data into a local object
       var cardsPath = new Firebase("https://brett-tom-game.firebaseio.com/cards");
-      var gamePath = new Firebase("https://brett-tom-game.firebaseio.com/games/" + gameId);
-      $scope.cards = $firebaseObject(cardsPath);
-      $scope.game = $firebaseObject(gamePath);
+      var cards = $firebaseObject(cardsPath);
+      cards.$bindTo($scope, "cards");
 
+      // download the individual game into a local object
+      var gamePath = new Firebase("https://brett-tom-game.firebaseio.com/games/");
+      var game = $firebaseObject(gamePath);
+      game[gameId] = {"x": "current game data will go in here as an obj"};
+      game.$save();
+
+      /*
+      var game = $firebaseObject(gamePath);
+      game.$bindTo($scope, "game");
+*/
       // putting a console.log here won't work, see below
-      $scope.cards.$watch(function() {
+      cards.$watch(function() {
 
         // The starting decks and world will get generated
         var startingDeck = [];
-        var worldDeck = [];
+        var worldDeck = ["a", "b", "c"];
 
         // Go through each card in the dictionary
-        angular.forEach($scope.cards, function(value, key) {
+        angular.forEach(cards, function(value, key) {
           console.log(value, key);
         })
 
         // Details about the current game
-        $scope.game.$watch(function() {
+        game.$watch(function() {
 
           console.log('empty but triggers');
 
+          // If the board hasn't been created yet, do so
+          if (typeof $scope.game == "undefined"){
+            console.log('test');
+            $scope.game = {"x":"a"};
+          }
+
+/*
           // Go through each post in the room
-          angular.forEach($scope.game, function(value, key) {
+          angular.forEach(game, function(value, key) {
             console.log('empty out');
             console.log(value, key);
           })
+*/
 
         }); // $scope.game
 
       }); // $scope.cards
-
 
     }); // app.controller
   </script>
