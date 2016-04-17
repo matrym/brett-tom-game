@@ -13,6 +13,7 @@
   </div>
 
   <!-- Angular Material requires Angular.js Libraries -->
+  <script src="https://code.jquery.com/jquery-2.2.3.min.js" integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo=" crossorigin="anonymous"></script>
   <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.5.3/angular.min.js"></script>
   <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.5.3/angular-animate.min.js"></script>
   <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.5.3/angular-aria.min.js"></script>
@@ -55,7 +56,7 @@
                 controller: 'GameParamsSetupCtrl'
             })
             .state('game', {
-                url: '/game/:gameId/:playerName/',
+                url: '/game/:gameId/:username/',
                 templateUrl: '/templates/game.html',
                 controller: 'GameCtrl'
             });
@@ -86,64 +87,115 @@
       // Game id as stored in firebase
       var gameId = $state.params.gameId;
       var username = $state.params.username;
+      var userId = "user-" + username;
 
       // download the boardgame data into a local object
-      var cardsPath = new Firebase("https://brett-tom-game.firebaseio.com/cards");
+      var cardsPath = new Firebase("https://brett-tom-game.firebaseio.com/cards/");
       var cards = $firebaseObject(cardsPath);
-      cards.$bindTo($scope, "cards");
+      cards.$bindTo($scope, "cards").then(function() {
 
-      // download the individual game into a local object
-      var gamePath = new Firebase("https://brett-tom-game.firebaseio.com/games/");
-      var game = $firebaseObject(gamePath);
-      game[gameId] = {"x": "current game data will go in here as an obj"};
-      game.$save();
+        // download the individual game into a local object
+        var gamePath = new Firebase("https://brett-tom-game.firebaseio.com/games/");
+        var games = $firebaseObject(gamePath);
+        games.$bindTo($scope, "games").then(function() {
 
-      /*
-      var game = $firebaseObject(gamePath);
-      game.$bindTo($scope, "game");
-*/
-      // putting a console.log here won't work, see below
-      cards.$watch(function() {
-
-        // The starting decks and world will get generated
-        var startingDeck = [];
-        var worldDeck = ["a", "b", "c"];
-
-        // Go through each card in the dictionary
-        angular.forEach(cards, function(value, key) {
-          console.log(value, key);
-        })
-
-        // Details about the current game
-        game.$watch(function() {
-
-          console.log('empty but triggers');
-
-          // If the board hasn't been created yet, do so
-          if (typeof $scope.game == "undefined"){
-            console.log('test');
-            $scope.game = {"x":"a"};
+          // Get the gameboard or create it
+          if (typeof $scope.games[gameId] == "undefined"){
+            $scope.games[gameId] = setupEverything();
+            console.log('setup everything:', $scope.games[gameId]);
+          }
+          else if (typeof $scope.games[gameId][userId] == "undefined") {
+            $scope.games[gameId][userId] = setupStartingDeck();
+          }
+          else {
+            console.log('got board:', $scope.games[gameId]);
           }
 
-/*
-          // Go through each post in the room
-          angular.forEach(game, function(value, key) {
-            console.log('empty out');
-            console.log(value, key);
-          })
-*/
+          // Setup game function
+          function setupEverything(){
+            var obj = {};
+            obj.worldDeck = setupWorldDeck();
+            obj[userId] = setupStartingDeck();
+            return obj;
+          }
 
-        }); // $scope.game
+          // Setup game function
+          function setupStartingDeck(){
 
-      }); // $scope.cards
+            // Set up world deck
+            var startingDeck = [];
+
+            // Go through each card in the dictionary
+            angular.forEach(cards, function(card, key) {
+
+              // Store the id in the object so it isn't lost
+              card.id = key;
+
+              // Add to world deck per count
+              var startHandCount = 0;
+              while (startHandCount < card.startHandCount) {
+                startingDeck.push(card);
+                startHandCount++;
+              }
+
+            });
+
+            // Shuffle
+            shuffle(startingDeck);
+
+            // Return shuffled deck
+            console.log('setting up ' + username + 's deck', startingDeck);
+            return {'startingDeck': startingDeck};
+
+          }
+
+          // Setup game function
+          function setupWorldDeck(){
+
+            // Set up world deck
+            var worldDeck = [];
+
+            // Go through each card in the dictionary
+            angular.forEach(cards, function(card, key) {
+
+              // Store the id in the object so it isn't lost
+              card.id = key;
+
+              // Add to world deck per count
+              var tableTileCount = 0;
+              while (tableTileCount < card.tableTileCount) {
+                worldDeck.push(card);
+                tableTileCount++;
+              }
+
+            });
+
+            // Shuffle
+            shuffle(worldDeck);
+
+            // Return shuffled world deck
+            console.log('setting up world deck', worldDeck);
+            return {'worldDeck': worldDeck};
+          }
+
+        }); // close games bindto
+
+      }); // close cards bindto
 
     }); // app.controller
+
+
+    function shuffle(a) {
+        var j, x, i;
+        for (i = a.length; i; i -= 1) {
+            j = Math.floor(Math.random() * i);
+            x = a[i - 1];
+            a[i - 1] = a[j];
+            a[j] = x;
+        }
+    }
+
   </script>
 
 </body>
 </html>
-
-<!--
-Copyright 2016 Google Inc. All Rights Reserved.
-Use of this source code is governed by an MIT-style license that can be in foundin the LICENSE file at http://material.angularjs.org/license.
--->
