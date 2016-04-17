@@ -105,7 +105,7 @@
             console.log('setup everything:', $scope.games[gameId]);
           }
           else if (typeof $scope.games[gameId][userId] == "undefined") {
-            $scope.games[gameId][userId] = setupStartingDeck();
+            $scope.games[gameId][userId] = setupPlayer();
           }
           else {
             console.log('got board:', $scope.games[gameId]);
@@ -115,15 +115,15 @@
           function setupEverything(){
             var obj = {};
             obj.worldDeck = setupWorldDeck();
-            obj[userId] = setupStartingDeck();
+            obj[userId] = setupPlayer();
             return obj;
           }
 
           // Setup game function
-          function setupStartingDeck(){
+          function setupPlayer(){
 
             // Set up world deck
-            var startingDeck = [];
+            var drawPile = [];
 
             // Go through each card in the dictionary
             angular.forEach(cards, function(card, key) {
@@ -134,18 +134,18 @@
               // Add to world deck per count
               var startHandCount = 0;
               while (startHandCount < card.startHandCount) {
-                startingDeck.push(card);
+                drawPile.push(card);
                 startHandCount++;
               }
 
             });
 
             // Shuffle
-            shuffle(startingDeck);
+            shuffle(drawPile);
 
             // Return shuffled deck
-            console.log('setting up ' + username + 's deck', startingDeck);
-            return {'startingDeck': startingDeck};
+            console.log('setting up ' + username + 's deck', drawPile);
+            return {'drawPile': drawPile};
 
           }
 
@@ -181,6 +181,27 @@
         }); // close games bindto
 
       }); // close cards bindto
+
+
+      // the message is automatically added to our Firebase database!
+      $scope.addMessage = function() {
+
+        var msgCmd = $scope.newMessageText.split(" ")[0];
+
+        var fn = {
+          draw: function(number){
+            console.log("drawing " + number);
+          }
+        };
+
+        // Handle draw
+        if (typeof fn[msgCmd] == "function"){
+          fn[msgCmd]();
+        }
+
+        // Reset message text
+        $scope.newMessageText = "";
+      };
 
     }); // app.controller
 
